@@ -4,18 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Tarea extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory;
 
     protected $primaryKey = 'id_tareas';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    public $incrementing = true;
+    protected $keyType = 'int';
 
     protected $fillable = [
-        'id_tareas',
         'id_proyecto',
         'id_creado_por',
         'id_asignado_a',

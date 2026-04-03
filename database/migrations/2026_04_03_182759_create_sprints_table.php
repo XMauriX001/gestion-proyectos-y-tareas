@@ -9,9 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('sprints', function (Blueprint $table) {
-            $table->uuid('id_sprint')->primary();
-            $table->uuid('id_proyecto');
-            $table->uuid('id_creado_por');
+            $table->id('id_sprint');
+            $table->unsignedBigInteger('id_proyecto');
+            $table->unsignedBigInteger('id_creado_por');
             $table->unsignedBigInteger('id_estado');
             $table->string('titulo');
             $table->date('fecha_inicio');

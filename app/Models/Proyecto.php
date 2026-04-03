@@ -4,18 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Proyecto extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory;
 
     protected $primaryKey = 'id_proyecto';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    public $incrementing = true;
+    protected $keyType = 'int';
 
     protected $fillable = [
-        'id_proyecto',
         'creado_por',
         'id_estado',
         'titulo',

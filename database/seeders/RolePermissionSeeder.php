@@ -11,9 +11,9 @@ class RolePermissionSeeder extends Seeder
     public function run(): void
     {
         // Crear roles
-        $productOwner = Role::create(['name' => 'product_owner']);
-        $projectManager = Role::create(['name' => 'project_manager']);
-        $member = Role::create(['name' => 'member']);
+        $productOwner = Role::firstOrCreate(['name' => 'product_owner']);
+        $projectManager = Role::firstOrCreate(['name' => 'project_manager']);
+        $member = Role::firstOrCreate(['name' => 'member']);
 
         // Crear permisos
         $permissions = [
@@ -36,7 +36,7 @@ class RolePermissionSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
         // Asignar permisos a Product Owner 

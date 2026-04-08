@@ -15,7 +15,7 @@ class StoreSprintRequest extends FormRequest
             return false;
         }
         
-        return $proyecto->creado_por === $this->user()->id && $this->user()->can('crear_proyecto');
+        return $proyecto->creado_por === $this->user()->id || $this->user()->can('crear_proyecto');
     }
 
     public function rules(): array

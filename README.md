@@ -96,9 +96,9 @@ El sistema viene con usuarios preconfigurados mediante el seeder (`php artisan d
 
 | Rol | Email | Password |
 | :--- | :--- | :--- |
-| **Product Owner** | `po@example.com` | `password123` |
-| **Project Manager** | `pm@example.com` | `password123` |
-| **Developer** | `dev1@example.com` | `password123` |
+| **Product Owner** | `po@example.com` |
+| **Project Manager** | `pm@example.com` |
+| **Developer** | `dev1@example.com` | 
 
 ---
 

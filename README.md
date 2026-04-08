@@ -94,11 +94,11 @@ Una vez que el servidor esté corriendo, puedes acceder a la documentación inte
 
 El sistema viene con usuarios preconfigurados mediante el seeder (`php artisan db:seed`):
 
-| Rol | Email | Password |
-| :--- | :--- | :--- |
-| **Product Owner** | `po@example.com` |
-| **Project Manager** | `pm@example.com` |
-| **Developer** | `dev1@example.com` | 
+| Rol | Email 
+| :--- | :--- 
+| **Product Owner** | `po@example.com` 
+| **Project Manager** | `pm@example.com` 
+| **Developer** | `dev1@example.com` 
 
 ---
 

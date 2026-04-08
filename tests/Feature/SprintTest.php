@@ -20,33 +20,38 @@ class SprintTest extends TestCase
     {
         parent::setUp();
 
-        // limpiamos cache de permisos
+        // limpiamos los permisos de spatie
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // creamos roles y el permiso que pide el request
+        // preparamos roles y el permiso de edicion
         $po = Role::create(['name' => 'product_owner', 'guard_name' => 'web']);
         Role::create(['name' => 'member', 'guard_name' => 'web']);
         
         $permiso = Permission::create(['name' => 'editar_proyecto', 'guard_name' => 'web']);
         $po->givePermissionTo($permiso);
 
-        // llenamos los catalogos necesarios
+        // estados de proyecto
         DB::table('estado_proyectos')->insert([
             ['id_estado' => 1, 'estado' => 'activo'],
             ['id_estado' => 2, 'estado' => 'cerrado']
         ]);
         
+        // estados para los sprints
         DB::table('estado_sprints')->insert([
             ['id_estado' => 1, 'estado' => 'planificado'],
             ['id_estado' => 2, 'estado' => 'activo'],
             ['id_estado' => 3, 'estado' => 'cerrado']
         ]);
 
+        // estados de tarea necesarios para las transiciones
         DB::table('estado_tareas')->insert([
             ['id_estado' => 1, 'estado' => 'por_hacer'],
+            ['id_estado' => 2, 'estado' => 'en_progreso'],
+            ['id_estado' => 3, 'estado' => 'en_revision'],
             ['id_estado' => 4, 'estado' => 'completada']
         ]);
 
+        // prioridades para que el factory no explote
         DB::table('prioridad_tareas')->insert([
             ['id_prioridad' => 1, 'prioridad' => 'baja'],
             ['id_prioridad' => 2, 'prioridad' => 'media'],
@@ -57,7 +62,7 @@ class SprintTest extends TestCase
     /** @test */
     public function test_crear_sprint_exitosamente()
     {
-        // creamos al jefe y su proyecto
+        // crear sprint normal con fechas validas
         /** @var User $user */
         $user = User::factory()->create();
         $user->assignRole('product_owner');
@@ -68,7 +73,6 @@ class SprintTest extends TestCase
             'fecha_final' => now()->addDays(30)->format('Y-m-d')
         ]);
 
-        // intentamos crear el sprint
         $response = $this->actingAs($user)->postJson("/api/projects/{$proyecto->getKey()}/sprints", [
             'titulo' => 'sprint 1',
             'fecha_inicio' => now()->format('Y-m-d'),
@@ -81,7 +85,7 @@ class SprintTest extends TestCase
     /** @test */
     public function test_error_sprint_fechas_fuera_de_proyecto()
     {
-        // preparamos el usuario y un proyecto corto
+        // intentar crear sprint fuera del rango del proyecto
         /** @var User $user */
         $user = User::factory()->create();
         $user->assignRole('product_owner');
@@ -92,9 +96,8 @@ class SprintTest extends TestCase
             'fecha_final' => now()->addDays(5)->format('Y-m-d')
         ]);
 
-        // mandamos fechas que se salen del rango del proyecto
         $response = $this->actingAs($user)->postJson("/api/projects/{$proyecto->getKey()}/sprints", [
-            'titulo' => 'sprint invalido',
+            'titulo' => 'sprint malo',
             'fecha_inicio' => now()->format('Y-m-d'),
             'fecha_final' => now()->addDays(20)->format('Y-m-d')
         ]);
@@ -105,7 +108,7 @@ class SprintTest extends TestCase
     /** @test */
     public function test_cerrar_sprint_exitosamente()
     {
-        // creamos sprint activo y una tarea para mover
+        // cierre manual de un sprint activo
         /** @var User $user */
         $user = User::factory()->create();
         $user->assignRole('product_owner');
@@ -123,16 +126,49 @@ class SprintTest extends TestCase
             'id_estado' => 1
         ]);
 
-        // ejecutamos el cierre del sprint
         $response = $this->actingAs($user)->postJson("/api/projects/{$proyecto->getKey()}/close-sprint");
 
         $response->assertStatus(200);
     }
 
     /** @test */
+    public function test_sprint_se_cierra_automaticamente_al_completar_tareas()
+    {
+        // se verifica que el sprint se cierre solo al terminar la ultima tarea
+        /** @var User $user */
+        $user = User::factory()->create();
+        $user->assignRole('product_owner');
+
+        $proyecto = Proyecto::factory()->create(['creado_por' => $user->id]);
+        
+        $sprint = Sprint::factory()->create([
+            'id_proyecto' => $proyecto->getKey(),
+            'id_estado' => 2
+        ]);
+
+        $tarea = Tarea::factory()->create([
+            'id_proyecto' => $proyecto->getKey(),
+            'id_sprint' => $sprint->getKey(),
+            'id_asignado_a' => $user->id,
+            'id_estado' => 3 // en_revision
+        ]);
+
+        // completamos la tarea y el controller deberia cerrar el sprint
+        $this->actingAs($user)->patchJson("/api/tasks/{$tarea->getKey()}/status", [
+            'status' => 'completada'
+        ]);
+
+        // revisamos que el estado del sprint haya pasado a 3
+        $this->assertDatabaseHas('sprints', [
+            'id_sprint' => $sprint->getKey(),
+            'id_estado' => 3
+        ]);
+    }
+
+    /** @test */
     public function test_refresh_expirations_cierra_sprints_viejos()
     {
-        // creamos un sprint que ya expiro
+        // validar el cierre automatico por fecha vencida
         /** @var User $user */
         $user = User::factory()->create();
 
@@ -141,7 +177,6 @@ class SprintTest extends TestCase
             'fecha_final' => now()->subDays(1)
         ]);
 
-        // corremos el refresh automatico
         $response = $this->actingAs($user)->postJson("/api/sprints/refresh");
 
         $response->assertStatus(200);
@@ -150,7 +185,7 @@ class SprintTest extends TestCase
     /** @test */
     public function test_member_no_puede_crear_sprint()
     {
-        // intentamos crear sprint con un usuario sin permisos
+        // verificar que un miembro no tenga permisos de jefe
         /** @var User $user */
         $user = User::factory()->create();
         $user->assignRole('member');
@@ -158,7 +193,7 @@ class SprintTest extends TestCase
         $proyecto = Proyecto::factory()->create();
 
         $response = $this->actingAs($user)->postJson("/api/projects/{$proyecto->getKey()}/sprints", [
-            'titulo' => 'intento prohibido'
+            'titulo' => 'hack'
         ]);
 
         $response->assertStatus(403);

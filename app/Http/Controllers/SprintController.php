@@ -20,10 +20,6 @@ class SprintController extends Controller
     {
         $proyecto = Proyecto::findOrFail($projectId);
 
-        if ($proyecto->creado_por !== Auth::id() && !Auth::user()->can('editar_proyecto')) {
-            return response()->json(['message' => 'No autorizado para crear sprints en este proyecto'], 403);
-        }
-
         if ($request->fecha_inicio < $proyecto->fecha_inicio || $request->fecha_final > $proyecto->fecha_final) {
             return response()->json(['message' => 'Las fechas del sprint deben estar dentro de las fechas del proyecto'], 400);
         }

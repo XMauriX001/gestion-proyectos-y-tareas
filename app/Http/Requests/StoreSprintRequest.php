@@ -9,13 +9,10 @@ class StoreSprintRequest extends FormRequest
     public function authorize(): bool
     {
         $projectId = $this->route('id');
-        $proyecto = \App\Models\Proyecto::find($projectId);
-        
-        if (!$proyecto) {
-            return false;
-        }
-        
-        return $proyecto->creado_por === $this->user()->id || $this->user()->can('crear_proyecto');
+
+        $proyecto = \App\Models\Proyecto::findOrFail($projectId);
+
+        return $proyecto->creado_por == $this->user()->id || $this->user()->can('editar_proyecto');
     }
 
     public function rules(): array

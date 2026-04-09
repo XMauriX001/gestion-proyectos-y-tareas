@@ -33,6 +33,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sprints
     Route::post('/projects/{id}/sprints', [SprintController::class, 'store']);
     Route::post('/sprints/refresh', [SprintController::class, 'refreshExpirations']);
-    Route::post('/projects/{id}/close-sprint', [SprintController::class, 'closeSprint']);
+    Route::post('/sprints/{id}/close', [SprintController::class, 'closeSprint']);
     Route::get('/projects/{id}/closure-summary', [SprintController::class, 'closureSummary']);
 });

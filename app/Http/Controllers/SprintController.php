@@ -110,20 +110,28 @@ class SprintController extends Controller
 
     public function closeSprint(CloseSprintRequest $request, $id)
     {
-        $proyecto = Proyecto::findOrFail($id);
-
-        $estadoActivoSprint = EstadoSprint::where('estado', 'activo')->first();
-        $sprint = Sprint::where('id_proyecto', $proyecto->id_proyecto)
-            ->where('id_estado', $estadoActivoSprint ? $estadoActivoSprint->id_estado : 1)
-            ->first();
+        
+        $sprint = Sprint::find($id);
 
         if (!$sprint) {
-            return response()->json(['message' => 'No hay un sprint activo en este proyecto para cerrar'], 404);
+           
+            $proyecto = Proyecto::find($id);
+            if ($proyecto) {
+                $estadoActivoSprint = EstadoSprint::where('estado', 'activo')->first();
+                $sprint = Sprint::where('id_proyecto', $proyecto->id_proyecto)
+                    ->where('id_estado', $estadoActivoSprint ? $estadoActivoSprint->id_estado : 1)
+                    ->first();
+            }
         }
 
+        if (!$sprint) {
+            return response()->json(['message' => 'No se encontró el sprint solicitado o no hay un sprint activo para este proyecto'], 404);
+        }
+
+        $proyecto = $sprint->proyecto;
         $estadoCerradoSprint = EstadoSprint::where('estado', 'cerrado')->first();
 
-        // Contar tareas por estado del sprint
+       
         $totalTareas = $sprint->tareas()->count();
         $tareasCompletadas = $sprint->tareas()
             ->where('id_estado', EstadoTarea::where('estado', 'completada')->first()->id_estado ?? 4)
@@ -148,9 +156,11 @@ class SprintController extends Controller
             ->where('id_estado', '!=', $estadoCompletada ? $estadoCompletada->id_estado : 4)
             ->get();
 
-        $proximoSprint = Sprint::where('id_proyecto', $proyecto->id_proyecto)
+        
+        $proximoSprint = Sprint::where('id_proyecto', $sprint->id_proyecto)
             ->where('id_sprint', '!=', $sprint->id_sprint)
-            ->where('fecha_inicio', '>=', $sprint->fecha_final)
+            ->where('fecha_inicio', '>=', $sprint->fecha_inicio)
+            ->where('id_estado', '!=', $estadoCerradoSprint ? $estadoCerradoSprint->id_estado : 2)
             ->orderBy('fecha_inicio', 'asc')
             ->first();
 
@@ -164,11 +174,11 @@ class SprintController extends Controller
             $tareasMov++;
         }
 
-        // Cambiar estado del sprint a cerrado
         $sprint->update(['id_estado' => $estadoCerradoSprint ? $estadoCerradoSprint->id_estado : 2]);
 
         $detalles = [
             'sprint_id' => $sprint->id_sprint,
+            'sprint_titulo' => $sprint->titulo,
             'total_tareas' => $totalTareas,
             'completadas' => $tareasCompletadas,
             'en_revision' => $tareasEnRevision,
@@ -193,6 +203,7 @@ class SprintController extends Controller
             'data' => [
                 'sprint' => $sprint,
                 'metricas' => $detalles,
+                'proximo_sprint_id' => $proximoSprint ? $proximoSprint->id_sprint : null
             ]
         ]);
     }
@@ -205,22 +216,25 @@ class SprintController extends Controller
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
-        $ultimoCierre = HistorialProject::where('id_proyecto', $id)
+        $cierres = HistorialProject::where('id_proyecto', $id)
             ->where('accion', 'sprint_closed')
             ->orderBy('changed_at', 'desc')
-            ->first();
+            ->get();
 
-        if (!$ultimoCierre) {
-            return response()->json(['message' => 'No hay cierre registrado para este proyecto'], 404);
+        if ($cierres->isEmpty()) {
+            return response()->json(['message' => 'No hay cierres registrados para este proyecto'], 404);
         }
 
         return response()->json([
             'proyecto' => $proyecto,
-            'cierre' => [
-                'fecha_cierre' => $ultimoCierre->changed_at,
-                'cerrado_por' => $ultimoCierre->usuario,
-                'metricas' => json_decode($ultimoCierre->detalles),
-            ]
+            'historial_cierres' => $cierres->map(function($cierre) {
+                $detalles = is_string($cierre->detalles) ? json_decode($cierre->detalles) : $cierre->detalles;
+                return [
+                    'fecha_cierre' => $cierre->changed_at,
+                    'cerrado_por' => $cierre->usuario ? $cierre->usuario->name : 'Sistema',
+                    'metricas' => $detalles,
+                ];
+            })
         ]);
     }
 }

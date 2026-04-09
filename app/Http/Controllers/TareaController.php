@@ -132,6 +132,10 @@ class TareaController extends Controller
             return response()->json(['message' => 'Solo el product owner o project manager pueden marcar la tarea como completada'], 403);
         }
 
+        if (in_array($request->status, ['en_progreso', 'en_revision', 'completada']) && is_null($tarea->id_asignado_a)) {
+            return response()->json(['message' => 'No se puede cambiar el estado si la tarea no ha sido asignada para completarla'], 400);
+        }
+
         $transicionesPermitidas = [
             'por_hacer' => ['en_progreso'],
             'en_progreso' => ['en_revision', 'por_hacer'],

@@ -19,7 +19,7 @@ class TareaSeeder extends Seeder
             Tarea::factory(5)
                 ->state(fn () => [
                     'id_proyecto' => $sprint->id_proyecto,
-                    'id_sprint' => $sprint->id,
+                    'id_sprint' => $sprint->id_sprint,
                     'id_creado_por' => $pm->id,
                     'id_asignado_a' => $members->random()->id,
                     'id_estado' => rand(1, 4),
